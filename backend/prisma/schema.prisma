@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN_PUSAT
+  ADMIN_PROVINSI
+  ADMIN_KABUPATEN
+  ADMIN_KECAMATAN
+  ADMIN_KELURAHAN
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  password     String
+  role         Role
+  // Region code: "31" (DKI), "3175" (Jaktim), dst. Null jika Pusat.
+  regionCode   String?  
+  regionName   String?
+  createdAt    DateTime @default(now())
+}
+
+model Member {
+  ktp          String   @id @unique // Char(16)
+  name         String
+  phone        String   @unique
+  
+  provinceCode String
+  regencyCode  String
+  districtCode String
+  villageCode  String
+
+  fullAddress  String?   
+
+  createdAt    DateTime @default(now())
+}
+
+
+model Region {
+  code       String  @id @unique 
+  name       String  
+  parentCode String? 
+  level      String  
+
+
+  parent   Region?  @relation("RegionHierarchy", fields: [parentCode], references: [code])
+  children Region[] @relation("RegionHierarchy")
+}
