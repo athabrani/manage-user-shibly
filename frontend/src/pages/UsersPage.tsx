@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
-import { Search, Plus, Trash2, Filter, Pencil, X, Save, AlertCircle } from 'lucide-react';
-import { Badge } from '../components/ui/badge'; // Pastikan path benar
+import { Search, Plus, Trash2, Pencil, X, Save, AlertCircle } from 'lucide-react';
+import { Badge } from '../components/ui/badge'; 
 import { format } from 'date-fns';
 
 // Interface Data Wilayah
 interface Region { code: string; name: string; }
 
 export default function Users() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<any[]>([]); // Pastikan tipe array
   const [showModal, setShowModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false); // Mode Edit vs Create
+  const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+
+  // STATE BARU: PENCARIAN
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form State
   const [form, setForm] = useState({
@@ -24,12 +27,11 @@ export default function Users() {
     villageCode: ''
   });
 
-  // Wilayah State (Untuk Dropdown)
+  // Wilayah State
   const [provinces, setProvinces] = useState<Region[]>([]);
   const [regencies, setRegencies] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<Region[]>([]);
   const [villages, setVillages] = useState<Region[]>([]);
-
 
   const fetchUsers = async () => {
     try {
@@ -40,13 +42,24 @@ export default function Users() {
 
   useEffect(() => { fetchUsers(); }, []);
 
+  // --- LOGIC SEARCH (FILTERING) ---
+  // Kita filter users berdasarkan Username ATAU Role ATAU Region Code
+  const filteredUsers = users.filter((user) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      user.username.toLowerCase().includes(query) ||
+      user.role.toLowerCase().replace('_', ' ').includes(query) ||
+      (user.regionCode && user.regionCode.includes(query))
+    );
+  });
+
+  // --- WILAYAH EFFECTS ---
   useEffect(() => {
     if (showModal) {
         api.get('/regions').then(res => setProvinces(res.data));
     }
   }, [showModal]);
 
-  // Fetch Anak Wilayah saat Parent berubah
   useEffect(() => {
     if (form.provinceCode) api.get(`/regions?parentCode=${form.provinceCode}`).then(res => setRegencies(res.data));
     else setRegencies([]);
@@ -62,12 +75,10 @@ export default function Users() {
     else setVillages([]);
   }, [form.districtCode]);
 
-
- 
+  // --- HANDLERS ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Tentukan Region Code final berdasarkan Role
     let finalRegionCode = '';
     if (form.role === 'ADMIN_PROVINSI') finalRegionCode = form.provinceCode;
     else if (form.role === 'ADMIN_KABUPATEN') finalRegionCode = form.regencyCode;
@@ -88,16 +99,15 @@ export default function Users() {
 
     try {
       if (isEditing && editId) {
-        await api.put(`/users/${editId}`, payload); // Edit
+        await api.put(`/users/${editId}`, payload);
       } else {
-        await api.post('/users', payload); // Create
+        await api.post('/users', payload);
       }
       closeModal();
       fetchUsers();
     } catch (error) { alert('Gagal menyimpan data user'); }
   };
 
-  // 4. Handle Delete
   const handleDelete = async (id: number) => {
     if (!confirm('Apakah anda yakin ingin menghapus akses user ini?')) return;
     try {
@@ -106,19 +116,15 @@ export default function Users() {
     } catch (error) { alert("Gagal menghapus user"); }
   };
 
-  // Helper: Buka Modal Edit
   const openEditModal = (user: any) => {
     setIsEditing(true);
     setEditId(user.id);
-    
-    // Reset wilayah dulu
     setForm({
         username: user.username,
-        password: '', // Password kosongkan (hanya diisi jika mau diubah)
+        password: '',
         role: user.role,
         provinceCode: '', regencyCode: '', districtCode: '', villageCode: ''
     });
-
     setShowModal(true);
   };
 
@@ -135,7 +141,14 @@ export default function Users() {
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input type="text" placeholder="Search users..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+          {/* INPUT SEARCH YANG SUDAH DIHUBUNGKAN */}
+          <input 
+            type="text" 
+            placeholder="Cari user / role..." 
+            className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
         <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-lg shadow-blue-200">
             <Plus size={16} /> Tambah User
@@ -155,45 +168,58 @@ export default function Users() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {users.map((u: any) => (
-              <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                        {u.username.substring(0, 2).toUpperCase()}
+            {/* TAMPILKAN PESAN JIKA HASIL PENCARIAN KOSONG */}
+            {filteredUsers.length === 0 ? (
+                <tr>
+                    <td colSpan={5} className="p-8 text-center text-gray-500">
+                        <div className="flex flex-col items-center gap-2">
+                            <AlertCircle size={24} className="text-gray-400"/>
+                            <p>User tidak ditemukan.</p>
+                        </div>
+                    </td>
+                </tr>
+            ) : (
+                /* GUNAKAN filteredUsers UNTUK MAPPING */
+                filteredUsers.map((u: any) => (
+                <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                            {u.username.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-gray-900">{u.username}</p>
+                            <p className="text-xs text-gray-500">ID: {u.id}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-sm font-semibold text-gray-900">{u.username}</p>
-                        <p className="text-xs text-gray-500">ID: {u.id}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                    <Badge variant="primary">{u.role.replace('ADMIN_', '')}</Badge>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-mono text-gray-600">
+                    {u.regionCode || 'PUSAT'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                    {format(new Date(u.createdAt), 'dd MMM yyyy')}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => openEditModal(u)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                            <Pencil size={16} />
+                        </button>
+                        <button onClick={() => handleDelete(u.id)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
+                            <Trash2 size={16} />
+                        </button>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <Badge variant="primary">{u.role.replace('ADMIN_', '')}</Badge>
-                </td>
-                <td className="px-6 py-4 text-sm font-mono text-gray-600">
-                  {u.regionCode || 'PUSAT'}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
-                  {format(new Date(u.createdAt), 'dd MMM yyyy')}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => openEditModal(u)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                        <Pencil size={16} />
-                    </button>
-                    <button onClick={() => handleDelete(u.id)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
-                        <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    </td>
+                </tr>
+                ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* MODAL FORM (ADD & EDIT) */}
+      {/* MODAL FORM (TETAP SAMA) */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in-up">
@@ -203,7 +229,6 @@ export default function Users() {
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {/* Username & Password */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500">Username</label>
@@ -212,14 +237,13 @@ export default function Users() {
                 </div>
                 <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500">Password {isEditing && '(Opsional)'}</label>
-                    <input type="password" required={!isEditing} // Wajib hanya saat Add Baru
+                    <input type="password" required={!isEditing}
                            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                            placeholder={isEditing ? "Biarkan kosong jika tetap" : "Password"}
                            value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
                 </div>
               </div>
 
-              {/* Role Selection */}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500">Tingkatan Pengguna (Role)</label>
                 <select className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
@@ -231,11 +255,9 @@ export default function Users() {
                 </select>
               </div>
 
-              {/* --- REGION SELECTION (DINAMIS SESUAI ROLE) --- */}
+              {/* REGION SELECTION (SAMA) */}
               <div className="p-4 bg-gray-50 rounded-lg space-y-3 border border-gray-100">
                 <p className="text-xs font-bold text-blue-600 uppercase mb-2">Pilih Wilayah Kerja</p>
-                
-                {/* 1. Provinsi (Selalu Muncul) */}
                 <div>
                    <select required className="w-full border rounded-lg px-3 py-2 text-sm"
                      value={form.provinceCode} onChange={e => setForm({...form, provinceCode: e.target.value, regencyCode: '', districtCode: '', villageCode: ''})}>
@@ -244,7 +266,6 @@ export default function Users() {
                    </select>
                 </div>
 
-                {/* 2. Kabupaten (Muncul jika Role >= Kabupaten) */}
                 {['ADMIN_KABUPATEN', 'ADMIN_KECAMATAN', 'ADMIN_KELURAHAN'].includes(form.role) && (
                     <select required className="w-full border rounded-lg px-3 py-2 text-sm"
                         value={form.regencyCode} onChange={e => setForm({...form, regencyCode: e.target.value, districtCode: '', villageCode: ''})}>
@@ -253,7 +274,6 @@ export default function Users() {
                     </select>
                 )}
 
-                {/* 3. Kecamatan (Muncul jika Role >= Kecamatan) */}
                 {['ADMIN_KECAMATAN', 'ADMIN_KELURAHAN'].includes(form.role) && (
                     <select required className="w-full border rounded-lg px-3 py-2 text-sm"
                         value={form.districtCode} onChange={e => setForm({...form, districtCode: e.target.value, villageCode: ''})}>
@@ -262,7 +282,6 @@ export default function Users() {
                     </select>
                 )}
 
-                {/* 4. Kelurahan (Muncul jika Role == Kelurahan) */}
                 {form.role === 'ADMIN_KELURAHAN' && (
                     <select required className="w-full border rounded-lg px-3 py-2 text-sm"
                         value={form.villageCode} onChange={e => setForm({...form, villageCode: e.target.value})}>

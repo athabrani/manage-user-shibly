@@ -68,12 +68,11 @@ export default function RegisterMember() {
   }, [form.districtCode]);
 
 
-  // --- HANDLERS ---
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    // VALIDASI INPUT NUMERIC (KTP & HP)
     if (name === 'ktp' || name === 'phone') {
       const numericValue = value.replace(/\D/g, ''); // Hapus karakter non-angka
       setForm({ ...form, [name]: numericValue });
@@ -88,7 +87,7 @@ export default function RegisterMember() {
     setSuccessMsg('');
     setLoading(true);
 
-    // Validasi Frontend Tambahan
+
     if (form.ktp.length !== 16) {
       setErrorMsg('No. KTP harus tepat 16 digit.');
       setLoading(false);
@@ -96,7 +95,7 @@ export default function RegisterMember() {
     }
 
     try {
-      await api.post('/members/register', form); // Sesuaikan endpoint backend
+      await api.post('/members/register', form); 
       setSuccessMsg('Anggota berhasil didaftarkan!');
       // Reset Form
       setForm({
@@ -114,7 +113,6 @@ export default function RegisterMember() {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         
-        {/* Header Form */}
         <div className="px-8 py-6 border-b border-gray-100 bg-gray-50">
           <h2 className="text-xl font-bold text-gray-800">Form Pendaftaran Anggota Baru</h2>
           <p className="text-sm text-gray-500 mt-1">Lengkapi data diri dan domisili anggota.</p>
@@ -140,7 +138,6 @@ export default function RegisterMember() {
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b pb-2">Data Diri</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                {/* No KTP */}
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700">
                     No. KTP <span className="text-red-500">*</span>
@@ -158,7 +155,6 @@ export default function RegisterMember() {
                   <p className="text-xs text-gray-400 text-right">{form.ktp.length}/16</p>
                 </div>
 
-                {/* Nama Lengkap */}
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700">
                     Nama Lengkap <span className="text-red-500">*</span>
@@ -173,8 +169,6 @@ export default function RegisterMember() {
                     required
                   />
                 </div>
-
-                {/* No Handphone */}
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700">
                     No. Handphone <span className="text-red-500">*</span>
@@ -192,7 +186,7 @@ export default function RegisterMember() {
               </div>
             </div>
 
-            {/* SECTION 2: DOMISILI (Dependent Dropdown) */}
+
             <div>
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b pb-2 mt-2">Domisili</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -228,7 +222,6 @@ export default function RegisterMember() {
                   </select>
                 </div>
 
-                {/* Kecamatan */}
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700">Kecamatan <span className="text-red-500">*</span></label>
                   <select
@@ -244,7 +237,6 @@ export default function RegisterMember() {
                   </select>
                 </div>
 
-                {/* Kelurahan */}
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700">Kelurahan <span className="text-red-500">*</span></label>
                   <select
@@ -263,7 +255,6 @@ export default function RegisterMember() {
               </div>
             </div>
 
-            {/* BUTTON SUBMIT */}
             <div className="pt-4 flex justify-end">
               <button
                 type="submit"

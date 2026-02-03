@@ -1,6 +1,6 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
-import { LayoutDashboard, Users, UserCog, Menu, UserPlus } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useState } from 'react';
 import { clsx } from 'clsx';
 import Sidebar from './ui/sidebar';
@@ -10,15 +10,6 @@ export default function Layout() {
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMinified, setIsMinified] = useState(false);
-
-  const menus = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['ALL'] },
-    { label: 'Data Anggota', path: '/members', icon: Users, roles: ['ALL'] },
-    { label: 'Daftar Anggota', path: '/register', icon: UserPlus, roles: ['ALL'] },
-    { label: 'User Management', path: '/users', icon: UserCog, roles: ['ADMIN_PUSAT'] },
-  ];
-
-  const filteredMenus = menus.filter(m => m.roles.includes('ALL') || m.roles.includes(user?.role));
 
   return (
     <div className="min-h-screen bg-[#f9f9f9] flex font-sans text-slate-600">
