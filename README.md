@@ -74,7 +74,7 @@ npm install
 npx prisma db push
 npx prisma generate
 
-# 4. Seeding Data (PENTING: Untuk membuat User & Wilayah awal)
+# 4. Seeding Data 
 npx prisma db seed
 
 # 5. Jalankan Server
@@ -96,3 +96,5 @@ npm install
 npm run dev
 ```
 Frontend akan berjalan di http://localhost:5173
+
+
